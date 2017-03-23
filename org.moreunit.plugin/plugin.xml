@@ -107,6 +107,18 @@
          </action>
       </viewerContribution>
       
+      <viewerContribution
+            targetID="#CompilationUnitEditorContext"
+            id="org.moreunit.contribution1">
+         <action
+               label="Generate New Test Method"
+               definitionId="org.moreunit.createnewtestmethod"
+               class="org.moreunit.actions.CreateNewTestMethodEditorAction"
+               menubarPath="org.moreunit.ui.editor.menu.moreunit/top"
+               id="org.moreunit.actions.createnewtestmethodaction">
+         </action>
+      </viewerContribution>
+      
       <objectContribution
             adaptable="false"
             id="org.moreunit.ui.compilationunit.menucontribution"

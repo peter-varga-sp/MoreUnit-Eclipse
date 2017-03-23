@@ -60,7 +60,7 @@ public class TestmethodCreator
     private boolean shouldCreateTasks;
     private CodeFormatter testFormatter;
     private boolean testCaseJustCreated;
-
+    private boolean shouldGenerateNextTestMethod;
 
     public TestmethodCreator(TestMethodCreationSettings settings)
     {
@@ -70,10 +70,12 @@ public class TestmethodCreator
         defaultTestMethodContent = settings.defaultTestMethodContent;
         shouldCreateFinalMethod = settings.shouldCreateFinalMethod;
         shouldCreateTasks = settings.shouldCreateTasks;
+        shouldGenerateNextTestMethod = settings.shouldGenerateNextTestMethod;
 
         testMethodDiviner = new TestMethodDivinerFactory(compilationUnit).create(testType);
 
-        if (settings.maybeTestCaseCompilationUnit != null) {
+        if(settings.maybeTestCaseCompilationUnit != null)
+        {
             setTestCaseCompilationUnit(settings.maybeTestCaseCompilationUnit, settings.testCaseJustCreated);
         }
     }
@@ -190,20 +192,23 @@ public class TestmethodCreator
             testMethodName = appendParameterNamesToMethodName(testMethodName, methodUnderTest.getParameterTypes());
         }
 
-        // If test method exists, ready
-        IMethod existingMethod = findTestMethod(testMethodName);
-        if(existingMethod != null)
+        String freeTestmethodName = findFirstFreeTestmethodName(testMethodName);
+
+        if(freeTestmethodName == null)
+        {
+            IMethod existingMethod = findTestMethod(testMethodName);
             return MethodCreationResult.methodAlreadyExists(existingMethod);
+        }
 
         String comment = generateTestMethodComment(methodUnderTest);
 
         IMethod testMethod = null;
         if(PreferenceConstants.TEST_TYPE_VALUE_JUNIT_4.equals(testType))
-            testMethod = createJUnit4Testmethod(testMethodName, null, comment);
+            testMethod = createJUnit4Testmethod(freeTestmethodName, null, comment);
         else if(PreferenceConstants.TEST_TYPE_VALUE_JUNIT_3.equals(testType))
-            testMethod = createJUnit3Testmethod(testMethodName, null, comment);
+            testMethod = createJUnit3Testmethod(freeTestmethodName, null, comment);
         else if(PreferenceConstants.TEST_TYPE_VALUE_TESTNG.equals(testType))
-            testMethod = createTestNgTestMethod(testMethodName, null, comment);
+            testMethod = createTestNgTestMethod(freeTestmethodName, null, comment);
 
         if(! discardExtensions && testMethod != null)
         {
@@ -213,6 +218,36 @@ public class TestmethodCreator
         }
 
         return MethodCreationResult.from(testMethod);
+    }
+
+    private String findFirstFreeTestmethodName(String testMethodName)
+    {
+        IMethod existingMethod = findTestMethod(testMethodName);
+        // if no method found with the name in parameter
+        if(existingMethod == null)
+        {
+            return testMethodName;
+        }
+
+        // test method already exists, and we should not find a unique one
+        if(existingMethod != null && ! shouldGenerateNextTestMethod)
+        {
+            // i
+            return null;
+        }
+
+        // test method already exists, and we should find a unique one, if
+        // configured so
+        int suffixNumber = 0;
+
+        do
+        {
+            suffixNumber++;
+            existingMethod = findTestMethod(testMethodName + "_" + suffixNumber);
+        }
+        while (existingMethod != null);
+
+        return testMethodName + "_" + suffixNumber;
     }
 
     // borrowed from org.eclipse.jdt.ui.wizards.NewTypeWizardPage
@@ -416,7 +451,7 @@ public class TestmethodCreator
                 methodBody = "// " + todoTaskTag + recommendedLineSeparator + defaultTestMethodContent;
             }
         }
-        return String.format("public %svoid %s() throws Exception {%s%s%s}",  finalPlaceholder, testmethodName, recommendedLineSeparator, methodBody, recommendedLineSeparator);
+        return String.format("public %svoid %s() throws Exception {%s%s%s}", finalPlaceholder, testmethodName, recommendedLineSeparator, methodBody, recommendedLineSeparator);
     }
 
     private String findRecommendedLineSeparator()
@@ -521,6 +556,7 @@ public class TestmethodCreator
         private ICompilationUnit maybeTestCaseCompilationUnit;
         private boolean testCaseJustCreated;
         private String testType;
+        private boolean shouldGenerateNextTestMethod;
 
         public TestMethodCreationSettings generateComments(boolean generateComments)
         {
@@ -554,6 +590,12 @@ public class TestmethodCreator
         public TestMethodCreationSettings createTasks(boolean createTasks)
         {
             shouldCreateTasks = createTasks;
+            return this;
+        }
+
+        public TestMethodCreationSettings generateNextTestMethod(boolean generateNextTestMethod)
+        {
+            shouldGenerateNextTestMethod = generateNextTestMethod;
             return this;
         }
 

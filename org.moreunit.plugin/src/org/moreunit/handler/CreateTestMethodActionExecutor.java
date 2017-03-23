@@ -95,12 +95,9 @@ public class CreateTestMethodActionExecutor
 
         // Creates test method template
         ProjectPreferences prefs = preferences.getProjectView(editorPartFacade.getJavaProject());
-        TestmethodCreator creator = new TestmethodCreator(new TestMethodCreationSettings()
-                .compilationUnit(compilationUnit, context.testCaseUnit)
-                .testCaseJustCreated(context.newTestClassCreated)
-                .testType(prefs.getTestType())
-                .generateComments(prefs.shouldGenerateCommentsForTestMethod())
-                .defaultTestMethodContent(prefs.getTestMethodDefaultContent()));
+        TestMethodCreationSettings testMethodCreationSettings = createTestMethodCreationSettings(compilationUnit, context, prefs);
+        TestmethodCreator creator = new TestmethodCreator(testMethodCreationSettings);
+
         MethodCreationResult creationResult = creator.createTestMethod(originalMethod);
 
         if(creationResult.methodAlreadyExists())
@@ -123,6 +120,16 @@ public class CreateTestMethodActionExecutor
                 MoreUnitAnnotationModel.updateAnnotations((ITextEditor) editorPart);
             }
         }
+    }
+
+    TestMethodCreationSettings createTestMethodCreationSettings(ICompilationUnit compilationUnit, CreationContext context, ProjectPreferences prefs)
+    {
+        return new TestMethodCreationSettings()
+                .compilationUnit(compilationUnit, context.testCaseUnit)
+                .testCaseJustCreated(context.newTestClassCreated)
+                .testType(prefs.getTestType())
+                .generateComments(prefs.shouldGenerateCommentsForTestMethod())
+                .defaultTestMethodContent(prefs.getTestMethodDefaultContent());
     }
 
     private CreationContext createContext(ICompilationUnit currentlyEditedUnit, IMethod currentlyEditedMethod)
@@ -167,7 +174,7 @@ public class CreateTestMethodActionExecutor
         selectionProvider.setSelection(exactSelection);
     }
 
-    private static class CreationContext
+    static class CreationContext
     {
         final ICompilationUnit testCaseUnit;
         final boolean newTestClassCreated;
