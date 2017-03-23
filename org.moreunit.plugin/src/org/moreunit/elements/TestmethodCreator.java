@@ -204,7 +204,7 @@ public class TestmethodCreator
 
         IMethod testMethod = null;
         if(PreferenceConstants.TEST_TYPE_VALUE_JUNIT_4.equals(testType))
-            testMethod = createJUnit4Testmethod(freeTestmethodName, null, comment);
+            testMethod = createJUnit4Testmethod(freeTestmethodName, null, comment, classTypeFacade, methodUnderTest);
         else if(PreferenceConstants.TEST_TYPE_VALUE_JUNIT_3.equals(testType))
             testMethod = createJUnit3Testmethod(freeTestmethodName, null, comment);
         else if(PreferenceConstants.TEST_TYPE_VALUE_TESTNG.equals(testType))
@@ -280,7 +280,9 @@ public class TestmethodCreator
 
         IMethod newTestMethod = null;
         if(PreferenceConstants.TEST_TYPE_VALUE_JUNIT_4.equals(testType))
-            newTestMethod = createJUnit4Testmethod(testMethodName, getSiblingForInsert(testMethod), comment);
+
+            // TODO get parameter data
+            newTestMethod = createJUnit4Testmethod(testMethodName, getSiblingForInsert(testMethod), comment, null, null);
         else if(PreferenceConstants.TEST_TYPE_VALUE_JUNIT_3.equals(testType))
             newTestMethod = createJUnit3Testmethod(testMethodName, getSiblingForInsert(testMethod), comment);
         else if(PreferenceConstants.TEST_TYPE_VALUE_TESTNG.equals(testType))
@@ -365,7 +367,9 @@ public class TestmethodCreator
         StringBuilder methodContent = new StringBuilder();
         methodContent.append(comment);
         methodContent.append("@Test").append(StringConstants.NEWLINE);
-        methodContent.append(getTestMethodString(testmethodName));
+
+        // TODO generate default content
+        methodContent.append(getTestMethodString(testmethodName, null));
 
         return methodContent.toString();
     }
@@ -374,24 +378,42 @@ public class TestmethodCreator
     {
         StringBuilder methodContent = new StringBuilder();
         methodContent.append(comment);
-        methodContent.append(getTestMethodString(testmethodName));
+
+        // TODO generate default content
+        methodContent.append(getTestMethodString(testmethodName, null));
 
         return methodContent.toString();
     }
 
-    protected IMethod createJUnit4Testmethod(String testMethodName, IMethod sibling, String comment)
+    protected IMethod createJUnit4Testmethod(String testMethodName, IMethod sibling, String comment, ClassTypeFacade classTypeFacade, IMethod methodUnderTest)
     {
-        return createMethod(testMethodName, getJUnit4MethodStub(testMethodName, comment), sibling);
+        String jUnit4MethodStub = getJUnit4MethodStub(testMethodName, comment, classTypeFacade, methodUnderTest);
+
+        return createMethod(testMethodName, jUnit4MethodStub, sibling);
     }
 
-    private String getJUnit4MethodStub(String testmethodName, String comment)
+    private String getJUnit4MethodStub(String testmethodName, String comment, ClassTypeFacade classTypeFacade, IMethod methodUnderTest)
     {
         StringBuilder methodContent = new StringBuilder();
         methodContent.append(comment);
         methodContent.append("@Test").append(StringConstants.NEWLINE);
-        methodContent.append(getTestMethodString(testmethodName));
+
+        String defaultMethodCall = generateDeafultMethodCall(classTypeFacade, methodUnderTest);
+        methodContent.append(getTestMethodString(testmethodName, defaultMethodCall));
 
         return methodContent.toString();
+    }
+
+    private String generateDeafultMethodCall(ClassTypeFacade classTypeFacade, IMethod methodUnderTest)
+    {
+
+        String classUnderTestName = classTypeFacade.getType().getElementName();
+        String beanName = "bean";
+
+        String result = "\t" + classUnderTestName + " " + beanName + " = new " + classUnderTestName + "();\n";
+        result = result + "\t" + beanName + "." + methodUnderTest.getElementName() + "();\n";
+
+        return result;
     }
 
     // copied from
@@ -434,7 +456,7 @@ public class TestmethodCreator
         return buffer.toString();
     }
 
-    private String getTestMethodString(String testmethodName)
+    private String getTestMethodString(String testmethodName, String generatedTestMethodContent)
     {
         String finalPlaceholder = " ";
         if(shouldCreateFinalMethod)
@@ -442,7 +464,8 @@ public class TestmethodCreator
 
         String recommendedLineSeparator = findRecommendedLineSeparator();
 
-        String methodBody = defaultTestMethodContent;
+        String methodBody = generatedTestMethodContent == null ? defaultTestMethodContent : generatedTestMethodContent;
+
         if(shouldCreateTasks)
         {
             String todoTaskTag = JUnitStubUtility.getTodoTaskTag(compilationUnit.getJavaProject());
